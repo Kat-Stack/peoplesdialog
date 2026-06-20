@@ -1,0 +1,449 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>PeoplesDialog</title>
+<meta name="description" content="A public space for open questions. Answer any that speak to you — or none." />
+
+<!-- Fonts (loaded from CDN; the page still works with the fallback stack if offline) -->
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;1,6..72,400&family=Space+Grotesk:wght@400;500;600&display=swap" rel="stylesheet" />
+
+<style>
+  /* ============================================================
+     PeoplesDialog — design tokens
+     ============================================================ */
+  :root {
+    --paper:      #FAF8F4;
+    --paper-2:    #F3EFE8;
+    --ink:        #232627;
+    --ink-soft:   #5C5F61;
+    --ink-faint:  #8A8C8B;
+    --line:       #E3DED5;
+    --accent:     #355E7C;
+    --accent-ink: #2A4C66;
+    --accent-tint:rgba(53, 94, 124, 0.09);
+    --ok:         #3C7A5A;
+    --warn:       #9A4B3B;
+
+    --serif: "Newsreader", Georgia, "Times New Roman", serif;
+    --grot:  "Space Grotesk", ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+
+    --measure: 40rem;     /* comfortable reading column */
+    --radius: 4px;
+  }
+
+  * { box-sizing: border-box; }
+
+  html { -webkit-text-size-adjust: 100%; }
+
+  body {
+    margin: 0;
+    background: var(--paper);
+    color: var(--ink);
+    font-family: var(--serif);
+    font-size: 18px;
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+
+  .wrap {
+    max-width: var(--measure);
+    margin: 0 auto;
+    padding: clamp(1.75rem, 5vw, 4rem) 1.25rem 5rem;
+  }
+
+  /* ----------------------------- header ----------------------------- */
+  .masthead { margin-bottom: clamp(2rem, 6vw, 3.25rem); }
+
+  .wordmark {
+    font-family: var(--grot);
+    font-weight: 600;
+    font-size: clamp(1.6rem, 6vw, 2.1rem);
+    letter-spacing: -0.01em;
+    margin: 0;
+    color: var(--ink);
+  }
+  .wordmark .dot { color: var(--accent); }
+
+  .standfirst {
+    margin: 0.65rem 0 0;
+    color: var(--ink-soft);
+    font-size: 1.05rem;
+    line-height: 1.5;
+    max-width: 32rem;
+  }
+
+  .optional-note {
+    margin-top: 1.1rem;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.55rem;
+    font-family: var(--grot);
+    font-size: 0.78rem;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--accent-ink);
+    background: var(--accent-tint);
+    padding: 0.4rem 0.7rem;
+    border-radius: 999px;
+  }
+  .optional-note::before {
+    content: "";
+    width: 7px; height: 7px;
+    border-radius: 50%;
+    background: var(--accent);
+  }
+
+  /* ----------------------------- feed ----------------------------- */
+  .feed { display: flex; flex-direction: column; gap: clamp(1.5rem, 4vw, 2.25rem); }
+
+  .q {
+    position: relative;
+    padding: 0.25rem 0 0.25rem 1.25rem;
+    border-left: 2px solid var(--line);
+    transition: border-color 160ms ease;
+  }
+  /* The signature touch: the card you're answering quietly becomes "yours". */
+  .q:focus-within { border-left-color: var(--accent); }
+
+  .q-text {
+    margin: 0 0 1rem;
+    font-size: clamp(1.2rem, 4.2vw, 1.4rem);
+    line-height: 1.4;
+    font-weight: 500;
+  }
+
+  .q-type {
+    font-family: var(--grot);
+    font-size: 0.7rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--ink-faint);
+    margin: 0 0 0.5rem;
+  }
+
+  /* open_text */
+  textarea {
+    width: 100%;
+    min-height: 6.5rem;
+    resize: vertical;
+    font-family: var(--serif);
+    font-size: 1.02rem;
+    line-height: 1.55;
+    color: var(--ink);
+    background: #fff;
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    padding: 0.85rem 0.95rem;
+  }
+  textarea::placeholder { color: var(--ink-faint); }
+
+  /* multiple_choice */
+  .choices { display: flex; flex-direction: column; gap: 0.5rem; margin: 0; }
+  .choice {
+    display: flex;
+    align-items: center;
+    gap: 0.7rem;
+    padding: 0.7rem 0.9rem;
+    background: #fff;
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    cursor: pointer;
+    transition: border-color 140ms ease, background 140ms ease;
+  }
+  .choice:hover { border-color: #d3cdc1; }
+  .choice:has(input:checked) {
+    border-color: var(--accent);
+    background: var(--accent-tint);
+  }
+  .choice input { accent-color: var(--accent); width: 1.05rem; height: 1.05rem; flex: none; }
+  .choice span { font-size: 1.02rem; }
+
+  /* actions */
+  .q-actions {
+    margin-top: 0.9rem;
+    display: flex;
+    align-items: center;
+    gap: 0.9rem;
+    flex-wrap: wrap;
+  }
+
+  button.share {
+    font-family: var(--grot);
+    font-weight: 500;
+    font-size: 0.92rem;
+    letter-spacing: 0.01em;
+    color: #fff;
+    background: var(--accent);
+    border: 0;
+    border-radius: var(--radius);
+    padding: 0.6rem 1.1rem;
+    cursor: pointer;
+    transition: background 140ms ease, transform 80ms ease;
+  }
+  button.share:hover { background: var(--accent-ink); }
+  button.share:active { transform: translateY(1px); }
+  button.share[disabled] { opacity: 0.55; cursor: default; }
+
+  .status {
+    font-family: var(--grot);
+    font-size: 0.82rem;
+    letter-spacing: 0.01em;
+    opacity: 0;
+    transform: translateY(2px);
+    transition: opacity 240ms ease, transform 240ms ease;
+  }
+  .status.show { opacity: 1; transform: none; }
+  .status.ok   { color: var(--ok); }
+  .status.err  { color: var(--warn); }
+
+  /* ----------------------------- states ----------------------------- */
+  .note {
+    color: var(--ink-soft);
+    font-size: 1.05rem;
+    padding: 1.5rem 0;
+  }
+  .note a {
+    color: var(--accent-ink);
+    text-decoration: underline;
+    text-underline-offset: 2px;
+    cursor: pointer;
+  }
+
+  .skeleton { display: flex; flex-direction: column; gap: 2rem; }
+  .sk { padding-left: 1.25rem; border-left: 2px solid var(--line); }
+  .sk-line {
+    height: 1rem;
+    background: var(--paper-2);
+    border-radius: 3px;
+    margin-bottom: 0.6rem;
+    animation: pulse 1.3s ease-in-out infinite;
+  }
+  .sk-line.short { width: 45%; }
+  .sk-box { height: 5rem; background: var(--paper-2); border-radius: var(--radius); animation: pulse 1.3s ease-in-out infinite; }
+  @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.45; } }
+
+  /* ----------------------------- footer ----------------------------- */
+  footer {
+    margin-top: 4rem;
+    padding-top: 1.5rem;
+    border-top: 1px solid var(--line);
+    font-family: var(--grot);
+    font-size: 0.78rem;
+    letter-spacing: 0.03em;
+    color: var(--ink-faint);
+  }
+
+  /* ----------------------------- a11y ----------------------------- */
+  :focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+    border-radius: 2px;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { animation: none !important; transition: none !important; }
+  }
+</style>
+</head>
+<body>
+  <main class="wrap">
+    <header class="masthead">
+      <h1 class="wordmark">PeoplesDialog<span class="dot">.</span></h1>
+      <p class="standfirst">A public space for open questions. Read what's being asked, and answer in your own words — anonymously.</p>
+      <span class="optional-note">Answer any, or none</span>
+    </header>
+
+    <div id="feed" class="feed" aria-live="polite"></div>
+
+    <footer>An open question is just an invitation. Nothing here is required.</footer>
+  </main>
+
+<script>
+  /* ============================================================
+     CONFIG
+     ============================================================ */
+  const CONFIG = {
+    // <-- paste your Apps Script Web App URL here
+    WEB_APP_URL: "PASTE_YOUR_WEB_APP_URL_HERE"
+  };
+
+  /* ============================================================
+     Tiny DOM helpers
+     ============================================================ */
+  const feed = document.getElementById("feed");
+
+  function el(tag, props = {}, children = []) {
+    const node = document.createElement(tag);
+    for (const [k, v] of Object.entries(props)) {
+      if (k === "class") node.className = v;
+      else if (k === "text") node.textContent = v;
+      else if (k.startsWith("on") && typeof v === "function") node.addEventListener(k.slice(2), v);
+      else node.setAttribute(k, v);
+    }
+    (Array.isArray(children) ? children : [children]).forEach(c => {
+      if (c == null) return;
+      node.appendChild(typeof c === "string" ? document.createTextNode(c) : c);
+    });
+    return node;
+  }
+
+  /* ============================================================
+     Data layer
+     ============================================================ */
+  async function loadQuestions() {
+    const res = await fetch(CONFIG.WEB_APP_URL, { method: "GET" });
+    const data = await res.json();
+    if (data && data.error) throw new Error(data.error);
+    return Array.isArray(data) ? data : [];
+  }
+
+  async function submitAnswer(payload) {
+    // text/plain keeps this a "simple" request, so the browser skips a CORS preflight.
+    const res = await fetch(CONFIG.WEB_APP_URL, {
+      method: "POST",
+      headers: { "Content-Type": "text/plain;charset=utf-8" },
+      body: JSON.stringify(payload)
+    });
+    // Be forgiving about the response shape; a 2xx is good enough.
+    try {
+      const data = await res.json();
+      if (data && data.ok === false) throw new Error(data.error || "Server declined the answer");
+    } catch (_) {
+      if (!res.ok) throw new Error("Request failed");
+    }
+  }
+
+  /* ============================================================
+     Rendering
+     ============================================================ */
+  function renderLoading() {
+    feed.innerHTML = "";
+    const sk = el("div", { class: "skeleton", "aria-hidden": "true" });
+    for (let i = 0; i < 3; i++) {
+      sk.appendChild(el("div", { class: "sk" }, [
+        el("div", { class: "sk-line" }),
+        el("div", { class: "sk-line short" }),
+        el("div", { class: "sk-box" })
+      ]));
+    }
+    feed.appendChild(sk);
+    feed.appendChild(el("p", { class: "note", text: "Loading questions…" }));
+  }
+
+  function renderEmpty() {
+    feed.innerHTML = "";
+    feed.appendChild(el("p", { class: "note",
+      text: "No open questions right now. Check back soon." }));
+  }
+
+  function renderLoadError() {
+    feed.innerHTML = "";
+    const p = el("p", { class: "note" }, [
+      "Couldn't reach the questions right now. ",
+      el("a", { text: "Try again", role: "button", tabindex: "0",
+        onclick: init, onkeydown: e => { if (e.key === "Enter" || e.key === " ") init(); } })
+    ]);
+    feed.appendChild(p);
+  }
+
+  function renderFeed(questions) {
+    feed.innerHTML = "";
+    if (!questions.length) return renderEmpty();
+    questions.forEach(q => feed.appendChild(renderQuestion(q)));
+  }
+
+  function renderQuestion(q) {
+    const card = el("section", { class: "q" });
+    const isChoice = q.type === "multiple_choice" && q.options && q.options.length;
+
+    card.appendChild(el("p", { class: "q-type",
+      text: isChoice ? "Choose one" : "Open answer" }));
+    card.appendChild(el("p", { class: "q-text", text: q.text }));
+
+    let getValue; // () -> { body, choice }
+
+    if (isChoice) {
+      const group = el("div", { class: "choices", role: "radiogroup", "aria-label": q.text });
+      const name = "q-" + q.id;
+      q.options.forEach((opt, i) => {
+        const input = el("input", { type: "radio", name, value: opt });
+        group.appendChild(el("label", { class: "choice" }, [input, el("span", { text: opt })]));
+        if (i === 0) input.setAttribute("data-first", "1");
+      });
+      card.appendChild(group);
+      getValue = () => {
+        const sel = group.querySelector("input:checked");
+        return { body: "", choice: sel ? sel.value : "" };
+      };
+    } else {
+      const ta = el("textarea", { placeholder: "Write your answer… (optional)", "aria-label": q.text });
+      card.appendChild(ta);
+      getValue = () => ({ body: ta.value.trim(), choice: "" });
+    }
+
+    const status = el("span", { class: "status", role: "status" });
+    const btn = el("button", { class: "share", type: "button", text: "Share answer" });
+
+    btn.addEventListener("click", async () => {
+      const { body, choice } = getValue();
+      btn.disabled = true;
+      showStatus(status, "", "");
+      try {
+        await submitAnswer({ question_id: q.id, body, choice });
+        clearInputs(card, isChoice);
+        showStatus(status, "Thanks — answer recorded", "ok");
+      } catch (err) {
+        showStatus(status, "Couldn't record that — try again", "err");
+      } finally {
+        btn.disabled = false;
+      }
+    });
+
+    card.appendChild(el("div", { class: "q-actions" }, [btn, status]));
+    return card;
+  }
+
+  function clearInputs(card, isChoice) {
+    if (isChoice) {
+      card.querySelectorAll("input[type=radio]").forEach(r => { r.checked = false; });
+    } else {
+      const ta = card.querySelector("textarea");
+      if (ta) ta.value = "";
+    }
+  }
+
+  let statusTimer;
+  function showStatus(node, text, kind) {
+    node.textContent = text;
+    node.className = "status" + (kind ? " " + kind : "") + (text ? " show" : "");
+    clearTimeout(statusTimer);
+    if (text) statusTimer = setTimeout(() => node.classList.remove("show"), 4000);
+  }
+
+  /* ============================================================
+     Boot
+     ============================================================ */
+  async function init() {
+    if (!CONFIG.WEB_APP_URL || CONFIG.WEB_APP_URL.indexOf("PASTE_YOUR_WEB_APP_URL") === 0) {
+      feed.innerHTML = "";
+      feed.appendChild(el("p", { class: "note",
+        text: "Set CONFIG.WEB_APP_URL in index.html to your Apps Script Web App URL, then reload." }));
+      return;
+    }
+    renderLoading();
+    try {
+      const questions = await loadQuestions();
+      renderFeed(questions);
+    } catch (err) {
+      renderLoadError();
+    }
+  }
+
+  init();
+</script>
+</body>
+</html>
