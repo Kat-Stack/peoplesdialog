@@ -339,6 +339,13 @@
     color: var(--ink-soft);
     font-size: 0.8rem;
   }
+  .group-card .question-text {
+    margin-top: 0.35rem;
+    font-family: var(--serif);
+    color: var(--ink);
+    font-size: 0.92rem;
+    line-height: 1.35;
+  }
 
   .note {
     color: var(--ink-soft);
@@ -436,6 +443,7 @@
   const CONFIG = {
     SHEET_ID: "1ZozLcG7gyDp84jK8bDaUFdksCNHRVEtmvhxdLMcztFw", /* public sheet id; # git-secret-ignore */
     ANSWERS_GID: "1641564586",
+    WEB_APP_URL: "https://script.google.com/macros/s/AKfycbxWfNOEYUWoMZO1XIb6rm9nKTrtEaMzddVkoTcgGPTffaBe1KSbx8mlgmUqy-PxmsTkeQ/exec", /* public Apps Script URL; # git-secret-ignore */
     POLL_MS: 10000
   };
 
@@ -454,6 +462,45 @@
 
   let lastSeenSignature = "";
   let isLoading = false;
+  let questionCache = [];
+
+  function normalizeQuestion(raw, fallbackIndex) {
+    if (typeof raw === "string") {
+      return { id: String(fallbackIndex + 1), text: raw };
+    }
+    const id = raw.id || raw.question_id || raw.questionId || raw.number || String(fallbackIndex + 1);
+    const text = raw.text || raw.question || raw.prompt || raw.title || raw.body || `Question ${id}`;
+    return { id: String(id), text };
+  }
+
+  async function fetchQuestions() {
+    const res = await fetch(CONFIG.WEB_APP_URL, { cache: "no-store" });
+    if (!res.ok) throw new Error(`Question request failed: ${res.status}`);
+    const data = await res.json();
+    const rawQuestions = Array.isArray(data) ? data : (data.questions || data.data || []);
+    questionCache = rawQuestions.map(normalizeQuestion);
+    return questionCache;
+  }
+
+  function questionFor(id, questions = questionCache) {
+    const normalized = String(id || "");
+    return questions.find(question => String(question.id) === normalized);
+  }
+
+  function questionLabel(id, questions = questionCache) {
+    return `Question ${id || "?"}`;
+  }
+
+  function questionText(id, questions = questionCache) {
+    const question = questionFor(id, questions);
+    return question ? question.text : "Question text unavailable";
+  }
+
+  function questionKey(id, questions = questionCache) {
+    const label = questionLabel(id, questions);
+    const text = questionText(id, questions);
+    return text === "Question text unavailable" ? label : `${label}: ${text}`;
+  }
 
   function parseCsv(text) {
     const rows = [];
@@ -600,7 +647,7 @@
     const show = () => {
       const text = shortAnswer(answerText(answer));
       const tooltip = el("div", { class: "map-tooltip" }, [
-        el("strong", { text: `Question ${answer.question_id || "?"} · ${formatFullTime(answer.created_at)}` }),
+        el("strong", { text: `${questionKey(answer.question_id)} · ${formatFullTime(answer.created_at)}` }),
         text
       ]);
       tooltip.style.setProperty("--tip-left", `${clamp(xPct, 18, 82)}%`);
@@ -641,7 +688,7 @@
       const dot = el("button", {
         class: "answer-dot",
         type: "button",
-        "aria-label": `Question ${answer.question_id || "?"}: ${shortAnswer(text)}`,
+        "aria-label": `${questionKey(answer.question_id)}: ${shortAnswer(text)}`,
         title: shortAnswer(text)
       });
       dot.style.left = `${xPct}%`;
@@ -676,7 +723,7 @@
     els.groups.appendChild(el("p", { class: "note", text: "Question groups will appear once answers arrive." }));
   }
 
-  function renderAnswers(answers) {
+  function renderAnswers(answers, questions = questionCache) {
     const sorted = sortAnswers(answers);
     const grouped = groupByQuestion(sorted);
     const latest = sorted[0];
@@ -697,7 +744,7 @@
       const text = answerText(answer);
       els.feed.appendChild(el("article", { class: "answer-card" }, [
         el("div", { class: "answer-meta" }, [
-          el("span", { text: `Question ${answer.question_id || "?"}` }),
+          el("span", { text: questionKey(answer.question_id, questions) }),
           el("time", { datetime: answer.created_at || "", text: formatFullTime(answer.created_at) })
         ]),
         el("p", { class: `answer-body${text ? "" : " answer-empty"}`, text: text || "No written answer" })
@@ -710,8 +757,9 @@
       .forEach(([questionId, groupAnswers]) => {
         const latestForGroup = sortAnswers(groupAnswers)[0];
         els.groups.appendChild(el("section", { class: "group-card" }, [
-          el("h3", { text: `Question ${questionId}` }),
-          el("p", { text: `${groupAnswers.length} answer${groupAnswers.length === 1 ? "" : "s"} · latest ${formatRelativeTime(latestForGroup.created_at)}` })
+          el("h3", { text: questionLabel(questionId, questions) }),
+          el("p", { text: `${groupAnswers.length} answer${groupAnswers.length === 1 ? "" : "s"} · latest ${formatRelativeTime(latestForGroup.created_at)}` }),
+          el("p", { class: "question-text", text: questionText(questionId, questions) })
         ]));
       });
   }
@@ -723,11 +771,14 @@
     if (manual) els.statusLine.textContent = "Refreshing…";
 
     try {
-      const answers = await fetchAnswers();
-      const signature = answers.map(answer => answer.id).join("|");
+      const [answers, questionsResult] = await Promise.all([
+        fetchAnswers(),
+        fetchQuestions().catch(() => questionCache)
+      ]);
+      const signature = `${answers.map(answer => answer.id).join("|")}:${questionsResult.map(question => question.text).join("|")}`;
       const changed = signature !== lastSeenSignature;
       lastSeenSignature = signature;
-      renderAnswers(answers);
+      renderAnswers(answers, questionsResult);
       els.statusLine.innerHTML = `Last checked <strong>${new Date().toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit", second: "2-digit" })}</strong>${changed ? " · updated" : " · no new answers"}`;
     } catch (err) {
       els.statusLine.textContent = "Could not load responses. Will keep trying.";
