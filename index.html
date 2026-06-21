@@ -77,8 +77,15 @@
     max-width: 32rem;
   }
 
-  .optional-note {
+  .masthead-actions {
     margin-top: 1.1rem;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+  }
+
+  .optional-note {
     display: inline-flex;
     align-items: center;
     gap: 0.55rem;
@@ -96,6 +103,13 @@
     width: 7px; height: 7px;
     border-radius: 50%;
     background: var(--accent);
+  }
+  .results-link {
+    font-family: var(--grot);
+    font-size: 0.82rem;
+    color: var(--accent-ink);
+    text-decoration: underline;
+    text-underline-offset: 3px;
   }
 
   /* ----------------------------- feed ----------------------------- */
@@ -254,7 +268,10 @@
     <header class="masthead">
       <h1 class="wordmark">PeoplesDialog<span class="dot">.</span></h1>
       <p class="standfirst">A public space for open questions. Read what's being asked, and answer in your own words — anonymously.</p>
-      <span class="optional-note">Answer any, or none</span>
+      <div class="masthead-actions">
+        <span class="optional-note">Answer any, or none</span>
+        <a class="results-link" href="./results.html">View live responses</a>
+      </div>
     </header>
 
     <div id="feed" class="feed" aria-live="polite"></div>

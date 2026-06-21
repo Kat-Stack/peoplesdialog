@@ -1,0 +1,520 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>PeoplesDialog — Responses</title>
+<meta name="description" content="Live public responses for PeoplesDialog." />
+
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;1,6..72,400&family=Space+Grotesk:wght@400;500;600&display=swap" rel="stylesheet" />
+
+<style>
+  :root {
+    --paper:      #FAF8F4;
+    --paper-2:    #F3EFE8;
+    --ink:        #232627;
+    --ink-soft:   #5C5F61;
+    --ink-faint:  #8A8C8B;
+    --line:       #E3DED5;
+    --accent:     #355E7C;
+    --accent-ink: #2A4C66;
+    --accent-tint:rgba(53, 94, 124, 0.09);
+    --ok:         #3C7A5A;
+    --warn:       #9A4B3B;
+
+    --serif: "Newsreader", Georgia, "Times New Roman", serif;
+    --grot:  "Space Grotesk", ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+    --radius: 4px;
+  }
+
+  * { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    margin: 0;
+    background: var(--paper);
+    color: var(--ink);
+    font-family: var(--serif);
+    font-size: 18px;
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+
+  .wrap {
+    width: min(68rem, 100%);
+    margin: 0 auto;
+    padding: clamp(1.75rem, 5vw, 4rem) 1.25rem 5rem;
+  }
+
+  .masthead {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 1rem;
+    align-items: start;
+    margin-bottom: clamp(2rem, 6vw, 3.25rem);
+  }
+  .wordmark {
+    font-family: var(--grot);
+    font-weight: 600;
+    font-size: clamp(1.6rem, 6vw, 2.1rem);
+    letter-spacing: -0.01em;
+    margin: 0;
+    color: var(--ink);
+  }
+  .wordmark .dot { color: var(--accent); }
+  .standfirst {
+    margin: 0.65rem 0 0;
+    color: var(--ink-soft);
+    font-size: 1.05rem;
+    line-height: 1.5;
+    max-width: 38rem;
+  }
+  .back-link {
+    font-family: var(--grot);
+    font-size: 0.82rem;
+    color: var(--accent-ink);
+    text-decoration: underline;
+    text-underline-offset: 3px;
+    white-space: nowrap;
+    margin-top: 0.35rem;
+  }
+
+  .stats {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 0.85rem;
+    margin-bottom: 1.6rem;
+  }
+  .stat {
+    background: #fff;
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    padding: 0.9rem 1rem;
+  }
+  .stat-label {
+    margin: 0 0 0.15rem;
+    font-family: var(--grot);
+    font-size: 0.68rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--ink-faint);
+  }
+  .stat-value {
+    margin: 0;
+    font-family: var(--grot);
+    font-size: clamp(1.25rem, 4vw, 1.8rem);
+    font-weight: 600;
+    line-height: 1.2;
+    color: var(--ink);
+  }
+
+  .toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    flex-wrap: wrap;
+    padding: 0.85rem 0;
+    border-top: 1px solid var(--line);
+    border-bottom: 1px solid var(--line);
+    margin-bottom: 1.8rem;
+  }
+  .status-line {
+    margin: 0;
+    font-family: var(--grot);
+    font-size: 0.82rem;
+    color: var(--ink-soft);
+  }
+  .status-line strong { color: var(--ink); font-weight: 500; }
+  .toolbar-actions { display: flex; align-items: center; gap: 0.8rem; }
+  button.refresh {
+    font-family: var(--grot);
+    font-weight: 500;
+    font-size: 0.86rem;
+    color: #fff;
+    background: var(--accent);
+    border: 0;
+    border-radius: var(--radius);
+    padding: 0.5rem 0.85rem;
+    cursor: pointer;
+  }
+  button.refresh:hover { background: var(--accent-ink); }
+  button.refresh[disabled] { opacity: 0.55; cursor: default; }
+  .pulse {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+    font-family: var(--grot);
+    font-size: 0.74rem;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--ok);
+  }
+  .pulse::before {
+    content: "";
+    width: 7px;
+    height: 7px;
+    border-radius: 999px;
+    background: var(--ok);
+  }
+
+  .layout {
+    display: grid;
+    grid-template-columns: minmax(0, 1.35fr) minmax(17rem, 0.65fr);
+    gap: clamp(1.5rem, 4vw, 2.25rem);
+    align-items: start;
+  }
+  .section-title {
+    margin: 0 0 0.9rem;
+    font-family: var(--grot);
+    font-size: 0.76rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--ink-faint);
+  }
+
+  .feed { display: flex; flex-direction: column; gap: 0.9rem; }
+  .answer-card {
+    background: #fff;
+    border: 1px solid var(--line);
+    border-left: 2px solid var(--accent);
+    border-radius: var(--radius);
+    padding: 0.95rem 1rem;
+  }
+  .answer-meta {
+    display: flex;
+    justify-content: space-between;
+    gap: 1rem;
+    margin-bottom: 0.45rem;
+    font-family: var(--grot);
+    font-size: 0.74rem;
+    letter-spacing: 0.03em;
+    color: var(--ink-faint);
+  }
+  .answer-body {
+    margin: 0;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+    font-size: 1.05rem;
+  }
+  .answer-empty { color: var(--ink-faint); font-style: italic; }
+
+  .groups {
+    display: flex;
+    flex-direction: column;
+    gap: 0.65rem;
+  }
+  .group-card {
+    background: var(--paper-2);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    padding: 0.75rem 0.85rem;
+  }
+  .group-card h3 {
+    margin: 0;
+    font-family: var(--grot);
+    font-size: 0.9rem;
+    font-weight: 600;
+  }
+  .group-card p {
+    margin: 0.15rem 0 0;
+    font-family: var(--grot);
+    color: var(--ink-soft);
+    font-size: 0.8rem;
+  }
+
+  .note {
+    color: var(--ink-soft);
+    font-size: 1.05rem;
+    padding: 1.5rem 0;
+  }
+  .note.err { color: var(--warn); }
+
+  footer {
+    margin-top: 4rem;
+    padding-top: 1.5rem;
+    border-top: 1px solid var(--line);
+    font-family: var(--grot);
+    font-size: 0.78rem;
+    letter-spacing: 0.03em;
+    color: var(--ink-faint);
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+    border-radius: 2px;
+  }
+  @media (max-width: 760px) {
+    .masthead { grid-template-columns: 1fr; }
+    .stats { grid-template-columns: 1fr; }
+    .layout { grid-template-columns: 1fr; }
+    .answer-meta { flex-direction: column; gap: 0.15rem; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { animation: none !important; transition: none !important; }
+  }
+</style>
+</head>
+<body>
+  <main class="wrap">
+    <header class="masthead">
+      <div>
+        <h1 class="wordmark">PeoplesDialog<span class="dot">.</span> Responses</h1>
+        <p class="standfirst">A lightweight live view of public answers as they arrive. The page reads directly from the public answer sheet and refreshes itself.</p>
+      </div>
+      <a class="back-link" href="./index.html">Answer questions</a>
+    </header>
+
+    <section class="stats" aria-label="Response summary">
+      <div class="stat">
+        <p class="stat-label">Answers</p>
+        <p id="answerCount" class="stat-value">—</p>
+      </div>
+      <div class="stat">
+        <p class="stat-label">Questions answered</p>
+        <p id="questionCount" class="stat-value">—</p>
+      </div>
+      <div class="stat">
+        <p class="stat-label">Latest answer</p>
+        <p id="latestAt" class="stat-value">—</p>
+      </div>
+    </section>
+
+    <section class="toolbar" aria-label="Live update controls">
+      <p id="statusLine" class="status-line">Loading responses…</p>
+      <div class="toolbar-actions">
+        <span class="pulse">Live polling</span>
+        <button id="refreshButton" class="refresh" type="button">Refresh now</button>
+      </div>
+    </section>
+
+    <div class="layout">
+      <section aria-labelledby="latestTitle">
+        <h2 id="latestTitle" class="section-title">Latest answers</h2>
+        <div id="feed" class="feed" aria-live="polite"></div>
+      </section>
+
+      <aside aria-labelledby="groupsTitle">
+        <h2 id="groupsTitle" class="section-title">By question</h2>
+        <div id="groups" class="groups"></div>
+      </aside>
+    </div>
+
+    <footer>Public answers only. Author IDs are intentionally not displayed.</footer>
+  </main>
+
+<script>
+  const CONFIG = {
+    SHEET_ID: "1ZozLcG7gyDp84jK8bDaUFdksCNHRVEtmvhxdLMcztFw", /* public sheet id; # git-secret-ignore */
+    ANSWERS_GID: "1641564586",
+    POLL_MS: 10000
+  };
+
+  const SHEET_CSV_URL = `https://docs.google.com/spreadsheets/d/${CONFIG.SHEET_ID}/export?format=csv&gid=${CONFIG.ANSWERS_GID}`;
+
+  const els = {
+    answerCount: document.getElementById("answerCount"),
+    questionCount: document.getElementById("questionCount"),
+    latestAt: document.getElementById("latestAt"),
+    statusLine: document.getElementById("statusLine"),
+    refreshButton: document.getElementById("refreshButton"),
+    feed: document.getElementById("feed"),
+    groups: document.getElementById("groups")
+  };
+
+  let lastSeenSignature = "";
+  let isLoading = false;
+
+  function parseCsv(text) {
+    const rows = [];
+    let row = [];
+    let field = "";
+    let inQuotes = false;
+
+    for (let i = 0; i < text.length; i++) {
+      const char = text[i];
+      const next = text[i + 1];
+
+      if (char === '"') {
+        if (inQuotes && next === '"') {
+          field += '"';
+          i++;
+        } else {
+          inQuotes = !inQuotes;
+        }
+      } else if (char === "," && !inQuotes) {
+        row.push(field);
+        field = "";
+      } else if ((char === "\n" || char === "\r") && !inQuotes) {
+        if (char === "\r" && next === "\n") i++;
+        row.push(field);
+        if (row.some(cell => cell.trim() !== "")) rows.push(row);
+        row = [];
+        field = "";
+      } else {
+        field += char;
+      }
+    }
+
+    row.push(field);
+    if (row.some(cell => cell.trim() !== "")) rows.push(row);
+    return rows;
+  }
+
+  function rowsToObjects(rows) {
+    if (!rows.length) return [];
+    const headers = rows[0].map(h => h.trim());
+    return rows.slice(1).map(row => {
+      const obj = {};
+      headers.forEach((header, index) => { obj[header] = row[index] || ""; });
+      return obj;
+    }).filter(answer => answer.id || answer.body || answer.choice);
+  }
+
+  async function fetchAnswers() {
+    const res = await fetch(SHEET_CSV_URL, { cache: "no-store" });
+    if (!res.ok) throw new Error(`Sheet request failed: ${res.status}`);
+    const csv = await res.text();
+    return rowsToObjects(parseCsv(csv));
+  }
+
+  function formatRelativeTime(value) {
+    if (!value) return "—";
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return "—";
+    const diffMs = Date.now() - date.getTime();
+    const diffMinutes = Math.round(diffMs / 60000);
+    if (diffMinutes < 1) return "just now";
+    if (diffMinutes === 1) return "1 min ago";
+    if (diffMinutes < 60) return `${diffMinutes} min ago`;
+    const diffHours = Math.round(diffMinutes / 60);
+    if (diffHours === 1) return "1 hour ago";
+    if (diffHours < 24) return `${diffHours} hours ago`;
+    return date.toLocaleDateString(undefined, { month: "short", day: "numeric" });
+  }
+
+  function formatFullTime(value) {
+    if (!value) return "Unknown time";
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return value;
+    return date.toLocaleString(undefined, {
+      month: "short",
+      day: "numeric",
+      hour: "numeric",
+      minute: "2-digit"
+    });
+  }
+
+  function answerText(answer) {
+    return (answer.body || answer.choice || "").trim();
+  }
+
+  function sortAnswers(answers) {
+    return [...answers].sort((a, b) => {
+      const aTime = new Date(a.created_at || 0).getTime() || 0;
+      const bTime = new Date(b.created_at || 0).getTime() || 0;
+      return bTime - aTime;
+    });
+  }
+
+  function groupByQuestion(answers) {
+    return answers.reduce((acc, answer) => {
+      const key = answer.question_id || "Unknown";
+      acc[key] = acc[key] || [];
+      acc[key].push(answer);
+      return acc;
+    }, {});
+  }
+
+  function el(tag, props = {}, children = []) {
+    const node = document.createElement(tag);
+    for (const [key, value] of Object.entries(props)) {
+      if (key === "class") node.className = value;
+      else if (key === "text") node.textContent = value;
+      else if (key.startsWith("on") && typeof value === "function") node.addEventListener(key.slice(2), value);
+      else node.setAttribute(key, value);
+    }
+    (Array.isArray(children) ? children : [children]).forEach(child => {
+      if (child == null) return;
+      node.appendChild(typeof child === "string" ? document.createTextNode(child) : child);
+    });
+    return node;
+  }
+
+  function renderEmpty() {
+    els.feed.innerHTML = "";
+    els.groups.innerHTML = "";
+    els.feed.appendChild(el("p", { class: "note", text: "No answers yet. The silence is not statistically significant, but it is very on brand." }));
+    els.groups.appendChild(el("p", { class: "note", text: "Question groups will appear once answers arrive." }));
+  }
+
+  function renderAnswers(answers) {
+    const sorted = sortAnswers(answers);
+    const grouped = groupByQuestion(sorted);
+    const latest = sorted[0];
+
+    els.answerCount.textContent = String(answers.length);
+    els.questionCount.textContent = String(Object.keys(grouped).length);
+    els.latestAt.textContent = latest ? formatRelativeTime(latest.created_at) : "—";
+
+    if (!answers.length) {
+      renderEmpty();
+      return;
+    }
+
+    els.feed.innerHTML = "";
+    sorted.forEach(answer => {
+      const text = answerText(answer);
+      els.feed.appendChild(el("article", { class: "answer-card" }, [
+        el("div", { class: "answer-meta" }, [
+          el("span", { text: `Question ${answer.question_id || "?"}` }),
+          el("time", { datetime: answer.created_at || "", text: formatFullTime(answer.created_at) })
+        ]),
+        el("p", { class: `answer-body${text ? "" : " answer-empty"}`, text: text || "No written answer" })
+      ]));
+    });
+
+    els.groups.innerHTML = "";
+    Object.entries(grouped)
+      .sort((a, b) => Number(a[0]) - Number(b[0]))
+      .forEach(([questionId, groupAnswers]) => {
+        const latestForGroup = sortAnswers(groupAnswers)[0];
+        els.groups.appendChild(el("section", { class: "group-card" }, [
+          el("h3", { text: `Question ${questionId}` }),
+          el("p", { text: `${groupAnswers.length} answer${groupAnswers.length === 1 ? "" : "s"} · latest ${formatRelativeTime(latestForGroup.created_at)}` })
+        ]));
+      });
+  }
+
+  async function refreshAnswers({ manual = false } = {}) {
+    if (isLoading) return;
+    isLoading = true;
+    els.refreshButton.disabled = true;
+    if (manual) els.statusLine.textContent = "Refreshing…";
+
+    try {
+      const answers = await fetchAnswers();
+      const signature = answers.map(answer => answer.id).join("|");
+      const changed = signature !== lastSeenSignature;
+      lastSeenSignature = signature;
+      renderAnswers(answers);
+      els.statusLine.innerHTML = `Last checked <strong>${new Date().toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit", second: "2-digit" })}</strong>${changed ? " · updated" : " · no new answers"}`;
+    } catch (err) {
+      els.statusLine.textContent = "Could not load responses. Will keep trying.";
+      els.feed.innerHTML = "";
+      els.feed.appendChild(el("p", { class: "note err", text: err.message || "Unknown error" }));
+    } finally {
+      isLoading = false;
+      els.refreshButton.disabled = false;
+    }
+  }
+
+  els.refreshButton.addEventListener("click", () => refreshAnswers({ manual: true }));
+  refreshAnswers();
+  window.setInterval(refreshAnswers, CONFIG.POLL_MS);
+</script>
+</body>
+</html>
