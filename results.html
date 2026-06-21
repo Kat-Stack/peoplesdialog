@@ -274,6 +274,37 @@
     color: var(--ink-soft);
     text-align: center;
   }
+  .cluster-legend {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr));
+    gap: 0.65rem;
+    margin-top: 0.8rem;
+  }
+  .cluster-pill {
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    background: var(--paper-2);
+    padding: 0.65rem 0.75rem;
+  }
+  .cluster-pill strong {
+    display: flex;
+    align-items: center;
+    gap: 0.45rem;
+    font-family: var(--grot);
+    font-size: 0.78rem;
+  }
+  .cluster-swatch {
+    width: 0.7rem;
+    height: 0.7rem;
+    border-radius: 999px;
+    border: 1px solid rgba(35, 38, 39, 0.14);
+    flex: none;
+  }
+  .cluster-pill p {
+    margin: 0.25rem 0 0;
+    color: var(--ink-soft);
+    font-size: 0.82rem;
+  }
 
   .layout {
     display: grid;
@@ -417,11 +448,12 @@
       <div class="map-head">
         <div>
           <h2 id="mapTitle" class="section-title">Answer map</h2>
-          <p class="map-copy">A playful 2D placement of answers using local keyword heuristics. Hover or focus a dot to read the response.</p>
-          <p class="map-caveat">Not embeddings. Not diagnosis. Just a cheap first instrument, which is often how the real instruments start.</p>
+          <p class="map-copy">A local semantic map of public answers. It builds tiny TF-IDF vectors in the browser, compares them to fixed axis anchors, and clusters nearby responses without sending text anywhere else.</p>
+          <p class="map-caveat">No API keys. No embeddings service. Still not a diagnosis; merely a machine for being wrong in a visible way.</p>
         </div>
       </div>
       <div id="answerMap" class="map-frame" aria-live="polite"></div>
+      <div id="clusterLegend" class="cluster-legend" aria-label="Detected answer clusters"></div>
     </section>
 
     <div class="layout">
@@ -457,7 +489,8 @@
     refreshButton: document.getElementById("refreshButton"),
     feed: document.getElementById("feed"),
     groups: document.getElementById("groups"),
-    answerMap: document.getElementById("answerMap")
+    answerMap: document.getElementById("answerMap"),
+    clusterLegend: document.getElementById("clusterLegend")
   };
 
   let lastSeenSignature = "";
@@ -619,6 +652,80 @@
     return Math.abs(hash);
   }
 
+  const STOP_WORDS = new Set([
+    "a", "an", "and", "are", "as", "at", "be", "but", "by", "for", "from", "has", "have", "i", "in", "is", "it", "its", "of", "on", "or", "our", "that", "the", "their", "them", "there", "this", "to", "we", "what", "with", "you", "your"
+  ]);
+
+  const AXIS_ANCHORS = {
+    normie: "job family school voting community local practical work money housing health policy safety neighbors help normal everyday",
+    schizo: "psyop memetic ritual occult egregore propaganda signal conspiracy simulation sovereign collapse narrative info operation weird fringe",
+    mythic: "mission meaning truth evil good territory map spirit sacred war civilization future reality destiny belief myth story",
+    practical: "build make fix need plan tool document list how where who when because example steps evidence concrete action"
+  };
+
+  const CLUSTER_COLORS = ["#355E7C", "#9A4B3B", "#3C7A5A", "#7C5C35"];
+
+  function tokenize(text) {
+    return (text || "")
+      .toLowerCase()
+      .replace(/[^a-z0-9\s-]/g, " ")
+      .split(/\s+/)
+      .map(token => token.replace(/^-+|-+$/g, ""))
+      .filter(token => token.length > 2 && !STOP_WORDS.has(token));
+  }
+
+  function cosine(a, b) {
+    let dot = 0;
+    let aMag = 0;
+    let bMag = 0;
+    const keys = new Set([...Object.keys(a), ...Object.keys(b)]);
+    keys.forEach(key => {
+      const av = a[key] || 0;
+      const bv = b[key] || 0;
+      dot += av * bv;
+      aMag += av * av;
+      bMag += bv * bv;
+    });
+    return aMag && bMag ? dot / (Math.sqrt(aMag) * Math.sqrt(bMag)) : 0;
+  }
+
+  function vectorFromTokens(tokens, idf) {
+    const counts = tokens.reduce((acc, token) => {
+      acc[token] = (acc[token] || 0) + 1;
+      return acc;
+    }, {});
+    const total = tokens.length || 1;
+    return Object.fromEntries(Object.entries(counts).map(([token, count]) => [token, (count / total) * (idf[token] || 1)]));
+  }
+
+  function buildSemanticModel(answers) {
+    const docs = answers.map(answer => tokenize(answerText(answer)));
+    const anchorDocs = Object.fromEntries(Object.entries(AXIS_ANCHORS).map(([name, text]) => [name, tokenize(text)]));
+    const allDocs = [...docs, ...Object.values(anchorDocs)];
+    const df = {};
+    allDocs.forEach(tokens => {
+      new Set(tokens).forEach(token => { df[token] = (df[token] || 0) + 1; });
+    });
+    const docCount = allDocs.length || 1;
+    const idf = Object.fromEntries(Object.entries(df).map(([token, count]) => [token, Math.log((docCount + 1) / (count + 1)) + 1]));
+    const vectors = docs.map(tokens => vectorFromTokens(tokens, idf));
+    const anchorVectors = Object.fromEntries(Object.entries(anchorDocs).map(([name, tokens]) => [name, vectorFromTokens(tokens, idf)]));
+    const points = answers.map((answer, index) => {
+      const heuristic = scoreAnswer(answer);
+      const vector = vectors[index];
+      const xSemantic = cosine(vector, anchorVectors.schizo) - cosine(vector, anchorVectors.normie);
+      const ySemantic = cosine(vector, anchorVectors.mythic) - cosine(vector, anchorVectors.practical);
+      return {
+        answer,
+        vector,
+        x: clamp((xSemantic * 2.6) + (heuristic.x * 0.35), -1, 1),
+        y: clamp((ySemantic * 2.6) + (heuristic.y * 0.35), -1, 1)
+      };
+    });
+    const clusters = clusterPoints(points);
+    return { points, clusters };
+  }
+
   function scoreAnswer(answer) {
     const text = answerText(answer).toLowerCase();
     const mainstreamWords = ["job", "family", "school", "vote", "community", "local", "practical", "work", "money", "housing", "health", "policy", "safe", "people", "help"];
@@ -638,17 +745,64 @@
     return { x, y };
   }
 
+  function clusterPoints(points) {
+    if (!points.length) return [];
+    const k = Math.min(4, Math.max(1, Math.round(Math.sqrt(points.length))));
+    const centers = points.slice(0, k).map(point => ({ x: point.x, y: point.y }));
+    for (let iteration = 0; iteration < 8; iteration++) {
+      points.forEach(point => {
+        point.cluster = nearestCenter(point, centers);
+      });
+      centers.forEach((center, index) => {
+        const members = points.filter(point => point.cluster === index);
+        if (!members.length) return;
+        center.x = members.reduce((sum, point) => sum + point.x, 0) / members.length;
+        center.y = members.reduce((sum, point) => sum + point.y, 0) / members.length;
+      });
+    }
+    points.forEach(point => { point.cluster = nearestCenter(point, centers); });
+    return centers.map((center, index) => {
+      const members = points.filter(point => point.cluster === index);
+      const terms = topClusterTerms(members);
+      return { index, center, members, terms };
+    }).filter(cluster => cluster.members.length);
+  }
+
+  function nearestCenter(point, centers) {
+    let best = 0;
+    let bestDistance = Infinity;
+    centers.forEach((center, index) => {
+      const distance = ((point.x - center.x) ** 2) + ((point.y - center.y) ** 2);
+      if (distance < bestDistance) {
+        best = index;
+        bestDistance = distance;
+      }
+    });
+    return best;
+  }
+
+  function topClusterTerms(members) {
+    const counts = {};
+    members.forEach(point => {
+      tokenize(answerText(point.answer)).forEach(token => { counts[token] = (counts[token] || 0) + 1; });
+    });
+    return Object.entries(counts)
+      .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
+      .slice(0, 4)
+      .map(([token]) => token);
+  }
+
   function shortAnswer(text) {
     if (!text) return "No written answer";
     return text.length > 180 ? `${text.slice(0, 177)}…` : text;
   }
 
-  function setTooltip(dot, answer, xPct, yPct) {
+  function setTooltip(dot, point, xPct, yPct) {
     const show = () => {
-      const text = shortAnswer(answerText(answer));
+      const text = shortAnswer(answerText(point.answer));
       const tooltip = el("div", { class: "map-tooltip" }, [
-        el("strong", { text: `${questionKey(answer.question_id)} · ${formatFullTime(answer.created_at)}` }),
-        text
+        el("strong", { text: `Cluster ${point.cluster + 1} · ${questionKey(point.answer.question_id)}` }),
+        `${text} (${point.x.toFixed(2)}, ${point.y.toFixed(2)})`
       ]);
       tooltip.style.setProperty("--tip-left", `${clamp(xPct, 18, 82)}%`);
       tooltip.style.setProperty("--tip-top", `${clamp(yPct, 18, 88)}%`);
@@ -663,8 +817,25 @@
     dot.addEventListener("blur", hide);
   }
 
+  function renderClusterLegend(clusters) {
+    els.clusterLegend.innerHTML = "";
+    if (!clusters.length) return;
+    clusters.forEach(cluster => {
+      const color = CLUSTER_COLORS[cluster.index % CLUSTER_COLORS.length];
+      const terms = cluster.terms.length ? cluster.terms.join(", ") : "too little text to name";
+      els.clusterLegend.appendChild(el("section", { class: "cluster-pill" }, [
+        el("strong", {}, [
+          el("span", { class: "cluster-swatch", style: `background:${color}` }),
+          `Cluster ${cluster.index + 1}: ${cluster.members.length} answer${cluster.members.length === 1 ? "" : "s"}`
+        ]),
+        el("p", { text: `Top terms: ${terms}` })
+      ]));
+    });
+  }
+
   function renderAnswerMap(answers) {
     els.answerMap.innerHTML = "";
+    els.clusterLegend.innerHTML = "";
     els.answerMap.appendChild(el("span", { class: "axis-label axis-left", text: "Normie" }));
     els.answerMap.appendChild(el("span", { class: "axis-label axis-right", text: "Schizo" }));
     els.answerMap.appendChild(el("span", { class: "axis-label axis-top", text: "Mythic" }));
@@ -675,27 +846,28 @@
       return;
     }
 
-    sortAnswers(answers).forEach((answer, index) => {
-      const text = answerText(answer);
-      const score = scoreAnswer(answer);
-      const hash = hashString(`${answer.id || index}:${text}`);
+    const model = buildSemanticModel(sortAnswers(answers));
+    renderClusterLegend(model.clusters);
+    model.points.forEach((point, index) => {
+      const text = answerText(point.answer);
+      const hash = hashString(`${point.answer.id || index}:${text}`);
       const jitterX = ((hash % 17) - 8) * 0.45;
       const jitterY = (((hash >> 4) % 17) - 8) * 0.45;
-      const xPct = clamp(50 + score.x * 38 + jitterX, 8, 92);
-      const yPct = clamp(50 - score.y * 38 + jitterY, 8, 92);
+      const xPct = clamp(50 + point.x * 38 + jitterX, 8, 92);
+      const yPct = clamp(50 - point.y * 38 + jitterY, 8, 92);
       const dotSize = clamp(0.95 + text.length / 280, 0.95, 1.6);
-      const hue = Math.round(205 + score.x * 25);
+      const color = CLUSTER_COLORS[(point.cluster || 0) % CLUSTER_COLORS.length];
       const dot = el("button", {
         class: "answer-dot",
         type: "button",
-        "aria-label": `${questionKey(answer.question_id)}: ${shortAnswer(text)}`,
+        "aria-label": `Cluster ${(point.cluster || 0) + 1}, ${questionKey(point.answer.question_id)}: ${shortAnswer(text)}`,
         title: shortAnswer(text)
       });
       dot.style.left = `${xPct}%`;
       dot.style.top = `${yPct}%`;
-      dot.style.background = `hsl(${hue}, 42%, 42%)`;
+      dot.style.background = color;
       dot.style.setProperty("--dot-size", `${dotSize}rem`);
-      setTooltip(dot, answer, xPct, yPct);
+      setTooltip(dot, point, xPct, yPct);
       els.answerMap.appendChild(dot);
     });
   }
