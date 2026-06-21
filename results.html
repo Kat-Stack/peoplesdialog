@@ -160,6 +160,121 @@
     background: var(--ok);
   }
 
+  .map-panel {
+    background: #fff;
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    padding: clamp(1rem, 3vw, 1.25rem);
+    margin-bottom: 1.8rem;
+  }
+  .map-head {
+    display: flex;
+    justify-content: space-between;
+    gap: 1rem;
+    align-items: start;
+    margin-bottom: 0.75rem;
+  }
+  .map-copy {
+    margin: 0;
+    color: var(--ink-soft);
+    font-size: 0.95rem;
+    max-width: 42rem;
+  }
+  .map-caveat {
+    margin: 0.55rem 0 0;
+    font-family: var(--grot);
+    font-size: 0.74rem;
+    color: var(--ink-faint);
+  }
+  .map-frame {
+    position: relative;
+    min-height: 23rem;
+    overflow: hidden;
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    background:
+      linear-gradient(90deg, rgba(53, 94, 124, 0.06), transparent 45%, rgba(154, 75, 59, 0.07)),
+      linear-gradient(180deg, rgba(60, 122, 90, 0.08), transparent 48%, rgba(35, 38, 39, 0.04));
+  }
+  .map-frame::before,
+  .map-frame::after {
+    content: "";
+    position: absolute;
+    background: rgba(35, 38, 39, 0.14);
+    pointer-events: none;
+  }
+  .map-frame::before { left: 50%; top: 0; bottom: 0; width: 1px; }
+  .map-frame::after { top: 50%; left: 0; right: 0; height: 1px; }
+  .axis-label {
+    position: absolute;
+    z-index: 1;
+    font-family: var(--grot);
+    font-size: 0.68rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--ink-faint);
+    background: rgba(250, 248, 244, 0.78);
+    border: 1px solid rgba(227, 222, 213, 0.75);
+    border-radius: 999px;
+    padding: 0.24rem 0.45rem;
+    backdrop-filter: blur(3px);
+  }
+  .axis-left { left: 0.65rem; top: 50%; transform: translateY(-50%); }
+  .axis-right { right: 0.65rem; top: 50%; transform: translateY(-50%); }
+  .axis-top { left: 50%; top: 0.65rem; transform: translateX(-50%); }
+  .axis-bottom { left: 50%; bottom: 0.65rem; transform: translateX(-50%); }
+  .answer-dot {
+    position: absolute;
+    z-index: 2;
+    width: var(--dot-size, 1.05rem);
+    height: var(--dot-size, 1.05rem);
+    border-radius: 999px;
+    border: 2px solid #fff;
+    background: var(--accent);
+    box-shadow: 0 2px 10px rgba(35, 38, 39, 0.18);
+    transform: translate(-50%, -50%);
+    cursor: help;
+  }
+  .answer-dot:focus,
+  .answer-dot:hover {
+    z-index: 3;
+    outline: 2px solid var(--accent-ink);
+    outline-offset: 2px;
+  }
+  .map-tooltip {
+    position: absolute;
+    z-index: 4;
+    left: var(--tip-left, 50%);
+    top: var(--tip-top, 50%);
+    width: min(18rem, calc(100% - 2rem));
+    background: rgba(35, 38, 39, 0.94);
+    color: #fff;
+    border-radius: var(--radius);
+    padding: 0.7rem 0.8rem;
+    font-size: 0.88rem;
+    line-height: 1.4;
+    transform: translate(-50%, calc(-100% - 0.8rem));
+    pointer-events: none;
+  }
+  .map-tooltip strong {
+    display: block;
+    margin-bottom: 0.25rem;
+    font-family: var(--grot);
+    font-size: 0.72rem;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: #dce8ef;
+  }
+  .map-empty {
+    position: absolute;
+    inset: 0;
+    display: grid;
+    place-items: center;
+    padding: 2rem;
+    color: var(--ink-soft);
+    text-align: center;
+  }
+
   .layout {
     display: grid;
     grid-template-columns: minmax(0, 1.35fr) minmax(17rem, 0.65fr);
@@ -223,6 +338,13 @@
     font-family: var(--grot);
     color: var(--ink-soft);
     font-size: 0.8rem;
+  }
+  .group-card .question-text {
+    margin-top: 0.35rem;
+    font-family: var(--serif);
+    color: var(--ink);
+    font-size: 0.92rem;
+    line-height: 1.35;
   }
 
   .note {
@@ -291,6 +413,17 @@
       </div>
     </section>
 
+    <section class="map-panel" aria-labelledby="mapTitle">
+      <div class="map-head">
+        <div>
+          <h2 id="mapTitle" class="section-title">Answer map</h2>
+          <p class="map-copy">A playful 2D placement of answers using local keyword heuristics. Hover or focus a dot to read the response.</p>
+          <p class="map-caveat">Not embeddings. Not diagnosis. Just a cheap first instrument, which is often how the real instruments start.</p>
+        </div>
+      </div>
+      <div id="answerMap" class="map-frame" aria-live="polite"></div>
+    </section>
+
     <div class="layout">
       <section aria-labelledby="latestTitle">
         <h2 id="latestTitle" class="section-title">Latest answers</h2>
@@ -310,6 +443,7 @@
   const CONFIG = {
     SHEET_ID: "1ZozLcG7gyDp84jK8bDaUFdksCNHRVEtmvhxdLMcztFw", /* public sheet id; # git-secret-ignore */
     ANSWERS_GID: "1641564586",
+    WEB_APP_URL: "https://script.google.com/macros/s/AKfycbxWfNOEYUWoMZO1XIb6rm9nKTrtEaMzddVkoTcgGPTffaBe1KSbx8mlgmUqy-PxmsTkeQ/exec", /* public Apps Script URL; # git-secret-ignore */
     POLL_MS: 10000
   };
 
@@ -322,11 +456,51 @@
     statusLine: document.getElementById("statusLine"),
     refreshButton: document.getElementById("refreshButton"),
     feed: document.getElementById("feed"),
-    groups: document.getElementById("groups")
+    groups: document.getElementById("groups"),
+    answerMap: document.getElementById("answerMap")
   };
 
   let lastSeenSignature = "";
   let isLoading = false;
+  let questionCache = [];
+
+  function normalizeQuestion(raw, fallbackIndex) {
+    if (typeof raw === "string") {
+      return { id: String(fallbackIndex + 1), text: raw };
+    }
+    const id = raw.id || raw.question_id || raw.questionId || raw.number || String(fallbackIndex + 1);
+    const text = raw.text || raw.question || raw.prompt || raw.title || raw.body || `Question ${id}`;
+    return { id: String(id), text };
+  }
+
+  async function fetchQuestions() {
+    const res = await fetch(CONFIG.WEB_APP_URL, { cache: "no-store" });
+    if (!res.ok) throw new Error(`Question request failed: ${res.status}`);
+    const data = await res.json();
+    const rawQuestions = Array.isArray(data) ? data : (data.questions || data.data || []);
+    questionCache = rawQuestions.map(normalizeQuestion);
+    return questionCache;
+  }
+
+  function questionFor(id, questions = questionCache) {
+    const normalized = String(id || "");
+    return questions.find(question => String(question.id) === normalized);
+  }
+
+  function questionLabel(id, questions = questionCache) {
+    return `Question ${id || "?"}`;
+  }
+
+  function questionText(id, questions = questionCache) {
+    const question = questionFor(id, questions);
+    return question ? question.text : "Question text unavailable";
+  }
+
+  function questionKey(id, questions = questionCache) {
+    const label = questionLabel(id, questions);
+    const text = questionText(id, questions);
+    return text === "Question text unavailable" ? label : `${label}: ${text}`;
+  }
 
   function parseCsv(text) {
     const rows = [];
@@ -429,6 +603,103 @@
     }, {});
   }
 
+  function countMatches(text, words) {
+    return words.reduce((count, word) => count + (text.includes(word) ? 1 : 0), 0);
+  }
+
+  function clamp(value, min, max) {
+    return Math.max(min, Math.min(max, value));
+  }
+
+  function hashString(value) {
+    let hash = 0;
+    for (let i = 0; i < value.length; i++) {
+      hash = ((hash << 5) - hash + value.charCodeAt(i)) | 0;
+    }
+    return Math.abs(hash);
+  }
+
+  function scoreAnswer(answer) {
+    const text = answerText(answer).toLowerCase();
+    const mainstreamWords = ["job", "family", "school", "vote", "community", "local", "practical", "work", "money", "housing", "health", "policy", "safe", "people", "help"];
+    const weirdWords = ["psyop", "memetic", "geneva", "simulation", "ritual", "occult", "schizo", "egregore", "propaganda", "sovereign", "myth", "signal", "npc", "op", "collapse"];
+    const practicalWords = ["build", "make", "fix", "need", "plan", "tool", "document", "list", "how", "where", "who", "when", "because", "example"];
+    const mythicWords = ["mission", "meaning", "truth", "evil", "good", "territory", "map", "narrative", "spirit", "sacred", "war", "civilization", "future", "reality"];
+
+    const mainstream = countMatches(text, mainstreamWords);
+    const weird = countMatches(text, weirdWords);
+    const practical = countMatches(text, practicalWords);
+    const mythic = countMatches(text, mythicWords);
+    const lengthNudge = clamp(text.length / 280, 0, 1);
+    const punctuationNudge = clamp(((text.match(/[?!]/g) || []).length) / 5, 0, 0.5);
+
+    const x = clamp((weird - mainstream) / 4 + lengthNudge * 0.18 + punctuationNudge * 0.18, -1, 1);
+    const y = clamp((mythic - practical) / 4 + lengthNudge * 0.12, -1, 1);
+    return { x, y };
+  }
+
+  function shortAnswer(text) {
+    if (!text) return "No written answer";
+    return text.length > 180 ? `${text.slice(0, 177)}…` : text;
+  }
+
+  function setTooltip(dot, answer, xPct, yPct) {
+    const show = () => {
+      const text = shortAnswer(answerText(answer));
+      const tooltip = el("div", { class: "map-tooltip" }, [
+        el("strong", { text: `${questionKey(answer.question_id)} · ${formatFullTime(answer.created_at)}` }),
+        text
+      ]);
+      tooltip.style.setProperty("--tip-left", `${clamp(xPct, 18, 82)}%`);
+      tooltip.style.setProperty("--tip-top", `${clamp(yPct, 18, 88)}%`);
+      els.answerMap.appendChild(tooltip);
+    };
+    const hide = () => {
+      els.answerMap.querySelectorAll(".map-tooltip").forEach(node => node.remove());
+    };
+    dot.addEventListener("mouseenter", show);
+    dot.addEventListener("mouseleave", hide);
+    dot.addEventListener("focus", show);
+    dot.addEventListener("blur", hide);
+  }
+
+  function renderAnswerMap(answers) {
+    els.answerMap.innerHTML = "";
+    els.answerMap.appendChild(el("span", { class: "axis-label axis-left", text: "Normie" }));
+    els.answerMap.appendChild(el("span", { class: "axis-label axis-right", text: "Schizo" }));
+    els.answerMap.appendChild(el("span", { class: "axis-label axis-top", text: "Mythic" }));
+    els.answerMap.appendChild(el("span", { class: "axis-label axis-bottom", text: "Practical" }));
+
+    if (!answers.length) {
+      els.answerMap.appendChild(el("div", { class: "map-empty", text: "No dots yet. The map is waiting for something to misunderstand." }));
+      return;
+    }
+
+    sortAnswers(answers).forEach((answer, index) => {
+      const text = answerText(answer);
+      const score = scoreAnswer(answer);
+      const hash = hashString(`${answer.id || index}:${text}`);
+      const jitterX = ((hash % 17) - 8) * 0.45;
+      const jitterY = (((hash >> 4) % 17) - 8) * 0.45;
+      const xPct = clamp(50 + score.x * 38 + jitterX, 8, 92);
+      const yPct = clamp(50 - score.y * 38 + jitterY, 8, 92);
+      const dotSize = clamp(0.95 + text.length / 280, 0.95, 1.6);
+      const hue = Math.round(205 + score.x * 25);
+      const dot = el("button", {
+        class: "answer-dot",
+        type: "button",
+        "aria-label": `${questionKey(answer.question_id)}: ${shortAnswer(text)}`,
+        title: shortAnswer(text)
+      });
+      dot.style.left = `${xPct}%`;
+      dot.style.top = `${yPct}%`;
+      dot.style.background = `hsl(${hue}, 42%, 42%)`;
+      dot.style.setProperty("--dot-size", `${dotSize}rem`);
+      setTooltip(dot, answer, xPct, yPct);
+      els.answerMap.appendChild(dot);
+    });
+  }
+
   function el(tag, props = {}, children = []) {
     const node = document.createElement(tag);
     for (const [key, value] of Object.entries(props)) {
@@ -447,11 +718,12 @@
   function renderEmpty() {
     els.feed.innerHTML = "";
     els.groups.innerHTML = "";
+    renderAnswerMap([]);
     els.feed.appendChild(el("p", { class: "note", text: "No answers yet. The silence is not statistically significant, but it is very on brand." }));
     els.groups.appendChild(el("p", { class: "note", text: "Question groups will appear once answers arrive." }));
   }
 
-  function renderAnswers(answers) {
+  function renderAnswers(answers, questions = questionCache) {
     const sorted = sortAnswers(answers);
     const grouped = groupByQuestion(sorted);
     const latest = sorted[0];
@@ -465,12 +737,14 @@
       return;
     }
 
+    renderAnswerMap(sorted);
+
     els.feed.innerHTML = "";
     sorted.forEach(answer => {
       const text = answerText(answer);
       els.feed.appendChild(el("article", { class: "answer-card" }, [
         el("div", { class: "answer-meta" }, [
-          el("span", { text: `Question ${answer.question_id || "?"}` }),
+          el("span", { text: questionKey(answer.question_id, questions) }),
           el("time", { datetime: answer.created_at || "", text: formatFullTime(answer.created_at) })
         ]),
         el("p", { class: `answer-body${text ? "" : " answer-empty"}`, text: text || "No written answer" })
@@ -483,8 +757,9 @@
       .forEach(([questionId, groupAnswers]) => {
         const latestForGroup = sortAnswers(groupAnswers)[0];
         els.groups.appendChild(el("section", { class: "group-card" }, [
-          el("h3", { text: `Question ${questionId}` }),
-          el("p", { text: `${groupAnswers.length} answer${groupAnswers.length === 1 ? "" : "s"} · latest ${formatRelativeTime(latestForGroup.created_at)}` })
+          el("h3", { text: questionLabel(questionId, questions) }),
+          el("p", { text: `${groupAnswers.length} answer${groupAnswers.length === 1 ? "" : "s"} · latest ${formatRelativeTime(latestForGroup.created_at)}` }),
+          el("p", { class: "question-text", text: questionText(questionId, questions) })
         ]));
       });
   }
@@ -496,15 +771,19 @@
     if (manual) els.statusLine.textContent = "Refreshing…";
 
     try {
-      const answers = await fetchAnswers();
-      const signature = answers.map(answer => answer.id).join("|");
+      const [answers, questionsResult] = await Promise.all([
+        fetchAnswers(),
+        fetchQuestions().catch(() => questionCache)
+      ]);
+      const signature = `${answers.map(answer => answer.id).join("|")}:${questionsResult.map(question => question.text).join("|")}`;
       const changed = signature !== lastSeenSignature;
       lastSeenSignature = signature;
-      renderAnswers(answers);
+      renderAnswers(answers, questionsResult);
       els.statusLine.innerHTML = `Last checked <strong>${new Date().toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit", second: "2-digit" })}</strong>${changed ? " · updated" : " · no new answers"}`;
     } catch (err) {
       els.statusLine.textContent = "Could not load responses. Will keep trying.";
       els.feed.innerHTML = "";
+      renderAnswerMap([]);
       els.feed.appendChild(el("p", { class: "note err", text: err.message || "Unknown error" }));
     } finally {
       isLoading = false;
